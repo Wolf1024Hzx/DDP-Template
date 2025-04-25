@@ -12,4 +12,4 @@ INFERENCE_MODEL_PATH: output/train1/best.pth
 
 # output
 OUTPUT_DIR: ./output
-EXP_NAME: eval1
+EXP_NAME: train2

@@ -44,8 +44,10 @@ def main() -> None:
 
 def evaluate(model, val_loader, criterion, device, logger) -> None:
     model.eval()
-    running_loss = 0.0
-    total_accuracy = 0.0
+
+    running_loss = torch.tensor(0.0).to(device)
+    total_correct = torch.tensor(0.0).to(device)
+    total_samples = torch.tensor(0.0).to(device)
 
     with torch.no_grad():
         for images, labels in val_loader:
@@ -53,12 +55,17 @@ def evaluate(model, val_loader, criterion, device, logger) -> None:
             outputs = model(images)
             loss = criterion(outputs, labels)
 
-            acc = count_accuracy(outputs, labels) / len(labels)
-            total_accuracy += acc
+            correct = (outputs.argmax(dim=1) == labels).sum().float()
+            total_correct += correct
+            total_samples += labels.size(0)
             running_loss += loss.item()
 
-    avg_loss = running_loss / len(val_loader)
-    avg_accuracy = total_accuracy / len(val_loader)
+    torch.distributed.all_reduce(total_correct)
+    torch.distributed.all_reduce(total_samples)
+    torch.distributed.all_reduce(running_loss)
+
+    avg_accuracy = total_correct.item() / total_samples.item()
+    avg_loss = running_loss.item() / total_samples.item()
     logger.info(f"Evaluation Results - Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
 
 

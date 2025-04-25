@@ -41,51 +41,48 @@ def main() -> None:
     optimizer = torch.optim.SGD(model.parameters(), lr=config['LR'])
     criterion = nn.CrossEntropyLoss().to(device)
 
-    train(model, train_loader, criterion, optimizer, config["EPOCHS"], device, logger, os.path.join(config["OUTPUT_DIR"], config["EXP_NAME"]))
+    train(model, train_loader, criterion, optimizer, config["EPOCHS"], device, logger,
+          os.path.join(config["OUTPUT_DIR"], config["EXP_NAME"]))
 
 
 def train(model, train_loader, criterion, optimizer, epochs, device, logger, output_dir) -> None:
     model.train()
     min_loss = float('inf')
-    loss_values = []
-    accuracy_values = []
+    logger.info("Initiate complete! Start training...")
     for epoch in range(epochs):
-        running_loss = 0.0
         train_loader.sampler.set_epoch(epoch)
-        total_accuracy = 0.0
-        # finish_len = 0
+
+        running_loss = torch.tensor(0.0).to(device)
+        total_correct = torch.tensor(0.0).to(device)
+        total_samples = torch.tensor(0.0).to(device)
+
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = model(images)
-            acc = count_accuracy(outputs, labels) / len(labels)
-            total_accuracy += acc
+            correct = (outputs.argmax(dim=1) == labels).sum().float()
+            total_correct += correct
+            total_samples += labels.size(0)
+
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
 
-            running_loss += loss.item()
-            # finish_len += 1
-            # logger.info(
-            #     f'Epoch {epoch + 1}[{finish_len}/{len(train_loader)}] Loss: {running_loss / len(train_loader):.4f} Accuracy: {total_accuracy / len(train_loader):.4f}')
+            running_loss += loss
 
-        loss_values.append(running_loss / len(train_loader))
+        torch.distributed.all_reduce(running_loss)
+        torch.distributed.all_reduce(total_correct)
+        torch.distributed.all_reduce(total_samples)
 
-        if utils.is_main_process() and min_loss > running_loss:
-            min_loss = running_loss
+        avg_loss = running_loss.item() / total_samples.item()
+        avg_accuracy = total_correct.item() / total_samples.item()
+
+        if utils.is_main_process() and min_loss > avg_loss:
+            min_loss = avg_loss
             torch.save(model.module.state_dict(), os.path.join(output_dir, "best.pth"))
 
-        total_accuracy = total_accuracy / len(train_loader)
-        accuracy_values.append(total_accuracy)
-        # logger.info(f"Finish epoch {epoch + 1}")
-        logger.info(f"Epoch {epoch + 1}, Loss: {running_loss / len(train_loader):.4f}, Accuracy: {total_accuracy:.4f}")
+        logger.info(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
     logger.success("Finish training!")
-
-
-def count_accuracy(outputs, labels):
-    outputs = outputs.argmax(axis=1)
-    cmp = outputs.type(labels.dtype) == labels
-    return float(cmp.type(labels.dtype).sum())
 
 
 if __name__ == '__main__':

@@ -1,15 +1,18 @@
 # environment
-CUDA_VISIBLE_DEVICES: 1,
+CUDA_VISIBLE_DEVICES: 1,2
 
 # train
 LR: 0.0001
 BATCH_SIZE: 64
 EPOCHS: 20
-CHECKPOINT_PATH:
+CHECKPOINT_PATH: output/train1/best.pth
 
 # eval
 INFERENCE_MODEL_PATH: output/train1/best.pth
 
 # output
 OUTPUT_DIR: ./output
-EXP_NAME: train2
+EXP_NAME: train1
+
+# DanceTrack
+DANCE_TRACK_ROOT: /home/hzx/workspace/dataset/DanceTrack

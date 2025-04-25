@@ -45,6 +45,8 @@ def load_config(config_path: str) -> dict:
         _generate_output_dir(os.path.join(config["OUTPUT_DIR"], config["EXP_NAME"]))
         config["LOG_FILE"] = os.path.join(config["OUTPUT_DIR"], config["EXP_NAME"], "log.txt")
         config["ONLY_MAIN_PROCESS"] = True
+        # DanceTrack
+        _item_in_config("DANCE_TRACK_ROOT", config)
 
         default_logger.success("Loaded config!")
         default_logger.update_config(config)

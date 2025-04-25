@@ -1,0 +1,15 @@
+# environment
+CUDA_VISIBLE_DEVICES: 1,
+
+# train
+LR: 0.0001
+BATCH_SIZE: 64
+EPOCHS: 20
+CHECKPOINT_PATH:
+
+# eval
+INFERENCE_MODEL_PATH: output/train1/best.pth
+
+# output
+OUTPUT_DIR: ./output
+EXP_NAME: eval1
